@@ -88,6 +88,11 @@ namespace EsUefaMicronations
                 MessageBox.Show("Nessuna partita registrata ancora.");
                 return;
             }
+            if( File.ReadAllLines(percorsoFile).Length == 0) 
+            {
+                MessageBox.Show("Nessuna partita registrata ancora.");
+                return;
+            }
 
             string[] partite = File.ReadAllLines(percorsoFile);
 
