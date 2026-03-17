@@ -11,9 +11,26 @@ using System.IO;
 
 namespace EsUefaMicronations
 {
+    public struct Partita
+    {
+        public string SquadraCasa;
+        public int GolCasa;
+        public string SquadraOspite;
+        public int GolOspite;
+
+        public Partita(string squadraCasa, int golCasa, string squadraOspite, int golOspite)
+        {
+            SquadraCasa = squadraCasa;
+            GolCasa = golCasa;
+            SquadraOspite = squadraOspite;
+            GolOspite = golOspite;
+        }
+    }
+
     public partial class Form1 : Form
     {
         private const string percorsoFile = "partite.txt";
+
         public Form1()
         {
             InitializeComponent();
@@ -23,9 +40,9 @@ namespace EsUefaMicronations
         {
             AggiornaLista();
         }
+
         private void btnSalva_Click(object sender, EventArgs e)
         {
-
             if (string.IsNullOrWhiteSpace(txtSquadraCasa.Text) || string.IsNullOrWhiteSpace(txtSquadraOspite.Text) || string.IsNullOrWhiteSpace(txtGolCasa.Text) || string.IsNullOrWhiteSpace(txtGolOspite.Text))
             {
                 MessageBox.Show("Per favore, compila tutti i campi prima di salvare.");
@@ -46,20 +63,22 @@ namespace EsUefaMicronations
                 MessageBox.Show("I gol non possono essere negativi. Per favore, inserisci un numero valido.");
                 return;
             }
-            SalvaSuFile(txtSquadraCasa.Text.Trim(), txtSquadraOspite.Text.Trim(),
-                        golCasa, golOspite);
+
+            Partita nuovaPartita = new Partita(txtSquadraCasa.Text.Trim(), golCasa, txtSquadraOspite.Text.Trim(), golOspite);
+            SalvaSuFile(nuovaPartita);
             PulisciCampi();
         }
-        private void SalvaSuFile(string squadraCasa, string squadraOspite,int golCasa, int golOspite)
+
+        private void SalvaSuFile(Partita partita)
         {
-            string lineaDaSalvare = $"{squadraCasa};{golCasa};{squadraOspite};{golOspite}";
+            string lineaDaSalvare = $"{partita.SquadraCasa};{partita.GolCasa};{partita.SquadraOspite};{partita.GolOspite}";
             using (StreamWriter sw = new StreamWriter(percorsoFile, true))
             {
                 sw.WriteLine(lineaDaSalvare);
             }
             AggiornaLista();
-
         }
+
         private void AggiornaLista()
         {
             lstInterfaccia.Items.Clear();
@@ -68,11 +87,12 @@ namespace EsUefaMicronations
                 string[] linee = File.ReadAllLines(percorsoFile);
                 foreach (string linea in linee)
                 {
-                    if(!string.IsNullOrWhiteSpace(linea))  //salta righe vuote o composte solo da spazi per esempio se il file è stato modificato manualmente e sono state aggiunte righe vuote
+                    if (!string.IsNullOrWhiteSpace(linea))
                         lstInterfaccia.Items.Add(linea);
                 }
             }
         }
+
         private void PulisciCampi()
         {
             txtSquadraCasa.Clear();
@@ -80,21 +100,33 @@ namespace EsUefaMicronations
             txtGolCasa.Clear();
             txtGolOspite.Clear();
         }
-        private void btnStatistiche_Click(object sender, EventArgs e)  
-        {
 
+        private void btnStatistiche_Click(object sender, EventArgs e)
+        {
             if (!File.Exists(percorsoFile))
             {
                 MessageBox.Show("Nessuna partita registrata ancora.");
                 return;
             }
-            if( File.ReadAllLines(percorsoFile).Length == 0) 
+            if (File.ReadAllLines(percorsoFile).Length == 0)
             {
                 MessageBox.Show("Nessuna partita registrata ancora.");
                 return;
             }
 
-            string[] partite = File.ReadAllLines(percorsoFile);
+            string[] lineeFile = File.ReadAllLines(percorsoFile);
+
+            // Converto le linee in array di struct Partita
+            List<Partita> partite = new List<Partita>();
+            foreach (string linea in lineeFile)
+            {
+                if (!string.IsNullOrWhiteSpace(linea))
+                {
+                    string[] dati = linea.Split(';');
+                    Partita p = new Partita(dati[0], int.Parse(dati[1]), dati[2], int.Parse(dati[3]));
+                    partite.Add(p);
+                }
+            }
 
             int totGolCampionato = 0;
             int maxGolPartita = 0;
@@ -102,35 +134,29 @@ namespace EsUefaMicronations
             string squadraMax = "";
             int maxGol = 0;
 
-            foreach (string partita in partite) 
+            foreach (Partita partita in partite)
             {
-                string[] dati = partita.Split(';');
-                string squadraCasa = dati[0];
-                int golCasa = int.Parse(dati[1]);
-                string squadraOspite = dati[2];
-                int golOspite = int.Parse(dati[3]);
-                int golTotali = golCasa + golOspite;
-
+                int golTotali = partita.GolCasa + partita.GolOspite;
                 totGolCampionato += golTotali;
 
                 if (golTotali > maxGolPartita)
                 {
                     maxGolPartita = golTotali;
-                    partitaConPiuGol = $"{squadraCasa} {golCasa} - {golOspite} {squadraOspite}";
+                    partitaConPiuGol = $"{partita.SquadraCasa} {partita.GolCasa} - {partita.GolOspite} {partita.SquadraOspite}";
                 }
 
-                int totaleCasa = ContaGolSquadra(squadraCasa, partite);  
-                if (totaleCasa > maxGol) 
+                int totaleCasa = ContaGolSquadra(partita.SquadraCasa, partite);
+                if (totaleCasa > maxGol)
                 {
-                    maxGol = totaleCasa;    
-                    squadraMax = squadraCasa;   
+                    maxGol = totaleCasa;
+                    squadraMax = partita.SquadraCasa;
                 }
 
-                int totaleOspite = ContaGolSquadra(squadraOspite, partite); 
-                if (totaleOspite > maxGol)  
+                int totaleOspite = ContaGolSquadra(partita.SquadraOspite, partite);
+                if (totaleOspite > maxGol)
                 {
                     maxGol = totaleOspite;
-                    squadraMax = squadraOspite;
+                    squadraMax = partita.SquadraOspite;
                 }
             }
 
@@ -140,19 +166,20 @@ namespace EsUefaMicronations
                 $"Gol totali nel campionato: {totGolCampionato}");
             AggiornaLista();
         }
-        private int ContaGolSquadra(string squadra, string[] partite)   //Prende una squadra e conta quanti gol ha segnato in totale in tutte le partite, sia da casa che da ospite, scorrendo tutte le partite registrate
+
+        private int ContaGolSquadra(string squadra, List<Partita> partite)
         {
             int totale = 0;
-            foreach (string partita in partite)
+            foreach (Partita partita in partite)
             {
-                string[] dati = partita.Split(';');
-                if (dati[0] == squadra)
-                    totale += int.Parse(dati[1]);
-                if (dati[2] == squadra)
-                    totale += int.Parse(dati[3]);
+                if (partita.SquadraCasa == squadra)
+                    totale += partita.GolCasa;
+                if (partita.SquadraOspite == squadra)
+                    totale += partita.GolOspite;
             }
             return totale;
         }
+
         private void btnCerca_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrWhiteSpace(txtCerca.Text))
@@ -171,18 +198,19 @@ namespace EsUefaMicronations
             lstInterfaccia.Items.Clear();
             bool trovata = false;
 
-            foreach (string partita in File.ReadAllLines(percorsoFile))
+            foreach (string linea in File.ReadAllLines(percorsoFile))
             {
-                if (!string.IsNullOrWhiteSpace(partita))
+                if (!string.IsNullOrWhiteSpace(linea))
                 {
+                    string[] dati = linea.Split(';');
+                    Partita partita = new Partita(dati[0], int.Parse(dati[1]), dati[2], int.Parse(dati[3]));
 
-                    string[] dati = partita.Split(';');
-                    string squadraCasa = dati[0].Trim().ToLower();
-                    string squadraOspite = dati[2].Trim().ToLower();
+                    string squadraCasa = partita.SquadraCasa.Trim().ToLower();
+                    string squadraOspite = partita.SquadraOspite.Trim().ToLower();
 
                     if (squadraCasa == squadraDaCercare || squadraOspite == squadraDaCercare)
                     {
-                        lstInterfaccia.Items.Add(partita);
+                        lstInterfaccia.Items.Add(linea);
                         trovata = true;
                     }
                 }
@@ -190,33 +218,25 @@ namespace EsUefaMicronations
             if (!trovata)
             {
                 MessageBox.Show($"Nessuna partita trovata per: {txtCerca.Text.Trim()}");
-                AggiornaLista(); 
+                AggiornaLista();
             }
         }
 
-        private void txtCerca_TextChanged(object sender, EventArgs e)
-        {
+        private void txtCerca_TextChanged(object sender, EventArgs e) 
+        { 
 
         }
-
-        private void txtGolCasa_TextChanged(object sender, EventArgs e)
-        {
-
+        private void txtGolCasa_TextChanged(object sender, EventArgs e) 
+        { 
         }
-
-        private void txtGolOspite_TextChanged(object sender, EventArgs e)
-        {
-
+        private void txtGolOspite_TextChanged(object sender, EventArgs e) 
+        { 
         }
-
-        private void txtSquadraOspite_TextChanged(object sender, EventArgs e)
-        {
-
+        private void txtSquadraOspite_TextChanged(object sender, EventArgs e) 
+        { 
         }
-
-        private void txtSquadraCasa_TextChanged(object sender, EventArgs e)
-        {
-
+        private void txtSquadraCasa_TextChanged(object sender, EventArgs e) 
+        { 
         }
     }
 }
